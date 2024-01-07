@@ -231,8 +231,7 @@ pxr::UsdStageRefPtr export_to_stage(const USDExportParams &params,
 
   /* If we want to set the subdiv scheme, then we need to the export the mesh
    * without the subdiv modifier applied. */
-  if ((params.export_subdiv == USD_SUBDIV_BEST_MATCH) ||
-      (params.export_subdiv == USD_SUBDIV_IGNORE)) {
+  if (ELEM(params.export_subdiv, USD_SUBDIV_BEST_MATCH, USD_SUBDIV_IGNORE)) {
     mod_disabler.disable_modifiers();
     BKE_scene_graph_update_tagged(depsgraph, bmain);
   }
@@ -297,6 +296,10 @@ pxr::UsdStageRefPtr export_to_stage(const USDExportParams &params,
   worker_status->do_update = true;
 
   iter.release_writers();
+
+  if (params.export_shapekeys || params.export_armatures) {
+    iter.process_usd_skel();
+  }
 
   /* Set the default prim if it doesn't exist */
   if (!usd_stage->GetDefaultPrim()) {
