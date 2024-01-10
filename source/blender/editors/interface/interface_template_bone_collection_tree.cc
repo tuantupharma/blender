@@ -106,7 +106,7 @@ class BoneCollectionDropTarget : public TreeViewItemDropTarget {
     }
 
     /* Do not allow dropping onto its own descendants. */
-    if (armature_bonecoll_is_decendent_of(
+    if (armature_bonecoll_is_descendant_of(
             drag_arm_bcoll->armature, drag_arm_bcoll->bcoll_index, drop_bonecoll_.bcoll_index))
     {
       *r_disabled_hint = "Cannot drag a collection onto a descendent";
@@ -237,11 +237,6 @@ class BoneCollectionItem : public AbstractTreeViewItem {
       return;
     }
     UI_menutype_draw(&C, mt, &column);
-  }
-
-  bool supports_collapsing() const override
-  {
-    return true;
   }
 
   std::optional<bool> should_be_active() const override
