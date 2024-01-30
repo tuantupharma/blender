@@ -2013,26 +2013,52 @@ class USERPREF_PT_extensions(ExtensionsPanel, Panel):
     # NOTE: currently disabled by an add-on when used.
     unused = True
 
-    @classmethod
-    def poll(cls, _context):
-        return cls.unused
-
     def draw(self, context):
         layout = self.layout
 
-        row = layout.row()
-        row.label(text="The add-on to use extensions is disabled!")
-        row = layout.row()
-        row.label(text="Enable \"Blender Extensions\" add-on in Testing to use extensions.")
+        if self.unused:
+            row = layout.row()
+            row.label(text="The add-on to use extensions is disabled!")
+            row = layout.row()
+            row.label(text="Enable \"Blender Extensions\" add-on in Testing to use extensions.")
+
+            # Placeholder, show this popover so it's accessible,
+            # typically this is accessed via the the add-ons UI.
+            row = layout.row()
+            row.popover("USERPREF_PT_extensions_repos", icon='SETTINGS')
 
 
-class USERPREF_PT_extensions_repos(ExtensionsPanel, Panel):
+class USERPREF_PT_extensions_repos(Panel):
     bl_label = "Repositories"
-    bl_options = {'DEFAULT_CLOSED'}
+    bl_options = {'HIDE_HEADER'}
+
+    bl_space_type = 'TOPBAR'  # dummy.
+    bl_region_type = 'HEADER'
+
+    # Show wider than most panels so the URL & directory aren't overly clipped.
+    bl_ui_units_x = 24
+
+    # NOTE: ideally `if panel := layout.panel("extensions_repo_advanced", default_closed=True):`
+    # would be used but it isn't supported here, use a kludge to achieve a similar UI.
+    _panel_layout_kludge_state = False
 
     @classmethod
-    def poll(cls, context):
-        return context.preferences.experimental.use_extension_repos
+    def _panel_layout_kludge(cls, layout, *, text):
+        row = layout.row(align=True)
+        row.alignment = 'LEFT'
+        show_advanced = USERPREF_PT_extensions_repos._panel_layout_kludge_state
+        props = row.operator(
+            "wm.context_toggle",
+            text="Advanced",
+            icon='DOWNARROW_HLT' if show_advanced else 'RIGHTARROW',
+            emboss=False,
+        )
+        props.module = "bl_ui.space_userpref"
+        props.data_path = "USERPREF_PT_extensions_repos._panel_layout_kludge_state"
+
+        if show_advanced:
+            return layout.column()
+        return None
 
     def draw(self, context):
         layout = self.layout
@@ -2065,11 +2091,13 @@ class USERPREF_PT_extensions_repos(ExtensionsPanel, Panel):
 
         layout.separator()
 
-        layout.prop(active_repo, "directory")
         layout.prop(active_repo, "remote_path")
-        row = layout.row()
-        row.prop(active_repo, "use_cache")
-        row.prop(active_repo, "module")
+
+        if layout_panel := self._panel_layout_kludge(layout, text="Advanced"):
+            layout_panel.prop(active_repo, "directory")
+            row = layout_panel.row()
+            row.prop(active_repo, "use_cache")
+            row.prop(active_repo, "module")
 
 
 # -----------------------------------------------------------------------------
@@ -2178,7 +2206,7 @@ class USERPREF_PT_addons(AddOnPanel, Panel):
 
         wm = context.window_manager
         prefs = context.preferences
-        used_ext = {ext.module for ext in prefs.addons}
+        used_addon_module_name_map = {addon.module: addon for addon in prefs.addons}
 
         # Experimental UI changes proposed in: #117285.
         use_extension_repos = prefs.experimental.use_extension_repos
@@ -2239,7 +2267,7 @@ class USERPREF_PT_addons(AddOnPanel, Panel):
         for mod, info in addons:
             module_name = mod.__name__
 
-            is_enabled = module_name in used_ext
+            is_enabled = module_name in used_addon_module_name_map
 
             if info["support"] not in support:
                 continue
@@ -2367,7 +2395,7 @@ class USERPREF_PT_addons(AddOnPanel, Panel):
 
                 # Show addon user preferences
                 if is_enabled:
-                    addon_preferences = prefs.addons[module_name].preferences
+                    addon_preferences = used_addon_module_name_map[module_name].preferences
                     if addon_preferences is not None:
                         draw = getattr(addon_preferences, "draw", None)
                         if draw is not None:
@@ -2392,7 +2420,10 @@ class USERPREF_PT_addons(AddOnPanel, Panel):
         # Append missing scripts
         # First collect scripts that are used but have no script file.
         module_names = {mod.__name__ for mod, info in addons}
-        missing_modules = {ext for ext in used_ext if ext not in module_names}
+        missing_modules = {
+            module_name for module_name in used_addon_module_name_map
+            if module_name not in module_names
+        }
 
         if missing_modules and filter in {"All", "Enabled"}:
             col.column().separator()
@@ -2400,7 +2431,7 @@ class USERPREF_PT_addons(AddOnPanel, Panel):
 
             module_names = {mod.__name__ for mod, info in addons}
             for module_name in sorted(missing_modules):
-                is_enabled = module_name in used_ext
+                is_enabled = module_name in used_addon_module_name_map
                 # Addon UI Code
                 box = col.column().box()
                 colsub = box.column()
