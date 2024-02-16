@@ -245,7 +245,9 @@ mark_as_advanced(CPACK_OVERRIDE_PACKAGENAME)
 mark_as_advanced(BUILDINFO_OVERRIDE_DATE)
 mark_as_advanced(BUILDINFO_OVERRIDE_TIME)
 
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16")
+# CMAKE 3.28.2 has issues with the combination of PCH and unity builds, disable for now.
+# upstream ticket https://gitlab.kitware.com/cmake/cmake/-/issues/25650
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16" AND NOT ${CMAKE_VERSION} VERSION_EQUAL "3.28.2")
   option(WITH_UNITY_BUILD "\
 Enable unity build for modules that support it to improve compile times.\n\
 WARNING: this option allows files to be built without all necessary headers!\n
@@ -701,12 +703,7 @@ mark_as_advanced(WITH_DRAW_DEBUG)
 
 # LLVM
 option(WITH_LLVM "Use LLVM" OFF)
-if(APPLE)
-  # We prefer static llvm build on Apple, dyn build possible though.
-  option(LLVM_STATIC "Link with LLVM static libraries" ON)
-else()
-  option(LLVM_STATIC "Link with LLVM static libraries" OFF)
-endif()
+option(LLVM_STATIC "Link with LLVM static libraries" OFF)
 mark_as_advanced(LLVM_STATIC)
 option(WITH_CLANG "Use Clang" OFF)
 
@@ -1154,14 +1151,7 @@ set_and_warn_dependency(WITH_IMAGE_OPENEXR WITH_CYCLES_OSL OFF)
 # Hydra requires USD.
 set_and_warn_dependency(WITH_USD WITH_HYDRA OFF)
 
-# auto enable openimageio for cycles
-if(WITH_CYCLES)
-  # auto enable llvm for cycles_osl
-  if(WITH_CYCLES_OSL)
-    set(WITH_LLVM ON CACHE BOOL "" FORCE)
-    set(WITH_CLANG ON CACHE BOOL "" FORCE)
-  endif()
-else()
+if(NOT WITH_CYCLES)
   set(WITH_CYCLES_OSL OFF)
 endif()
 
@@ -1378,18 +1368,6 @@ endif()
 
 if(NOT WITH_FFTW3 AND WITH_MOD_OCEANSIM)
   message(FATAL_ERROR "WITH_MOD_OCEANSIM requires WITH_FFTW3 to be ON")
-endif()
-
-if(WITH_CYCLES)
-  if(WITH_CYCLES_OSL)
-    if(NOT WITH_LLVM)
-      message(
-        FATAL_ERROR
-        "Cycles OSL requires WITH_LLVM, the library may not have been found. "
-        "Configure LLVM or disable WITH_CYCLES_OSL"
-      )
-    endif()
-  endif()
 endif()
 
 if(WITH_INTERNATIONAL)

@@ -38,7 +38,7 @@
 #include "DNA_userdef_types.h"
 #include "DNA_windowmanager_types.h"
 
-#include "BLT_translation.h"
+#include "BLT_translation.hh"
 
 #include "BLI_blenlib.h"
 #include "BLI_dial_2d.h"
@@ -52,7 +52,7 @@
 #include "BKE_brush.hh"
 #include "BKE_colortools.hh"
 #include "BKE_context.hh"
-#include "BKE_global.h"
+#include "BKE_global.hh"
 #include "BKE_idprop.h"
 #include "BKE_image.h"
 #include "BKE_image_format.h"
@@ -61,14 +61,14 @@
 #include "BKE_main.hh"
 #include "BKE_material.h"
 #include "BKE_preview_image.hh"
-#include "BKE_report.h"
-#include "BKE_scene.h"
+#include "BKE_report.hh"
+#include "BKE_scene.hh"
 #include "BKE_screen.hh" /* BKE_ST_MAXNAME */
 #include "BKE_unit.hh"
 
 #include "BKE_idtype.hh"
 
-#include "BLF_api.h"
+#include "BLF_api.hh"
 
 #include "GPU_immediate.h"
 #include "GPU_immediate_util.h"
@@ -246,15 +246,14 @@ std::string WM_operator_pystring_ex(bContext *C,
         opmptr = &opmptr_default;
       }
 
-      char *cstring_args = RNA_pointer_as_string_id(C, opmptr);
+      std::string string_args = RNA_pointer_as_string_id(C, opmptr);
       if (first_op) {
-        ss << opm->type->idname << '=' << cstring_args;
+        ss << opm->type->idname << '=' << string_args;
         first_op = false;
       }
       else {
-        ss << ", " << opm->type->idname << '=' << cstring_args;
+        ss << ", " << opm->type->idname << '=' << string_args;
       }
-      MEM_freeN(cstring_args);
 
       if (opmptr == &opmptr_default) {
         WM_operator_properties_free(&opmptr_default);
@@ -271,10 +270,8 @@ std::string WM_operator_pystring_ex(bContext *C,
       opptr = &opptr_default;
     }
 
-    char *cstring_args = RNA_pointer_as_string_keywords(
+    ss << RNA_pointer_as_string_keywords(
         C, opptr, false, all_args, macro_args_test, max_prop_length);
-    ss << cstring_args;
-    MEM_freeN(cstring_args);
 
     if (opptr == &opptr_default) {
       WM_operator_properties_free(&opptr_default);
@@ -608,34 +605,31 @@ std::optional<std::string> WM_context_path_resolve_property_full(const bContext 
   }
   std::string member_id_data_path;
   if (is_id && !RNA_struct_is_ID(ptr->type)) {
-    char *data_path = RNA_path_from_ID_to_struct(ptr);
-    if (data_path != nullptr) {
+    std::optional<std::string> data_path = RNA_path_from_ID_to_struct(ptr);
+    if (data_path) {
       if (prop != nullptr) {
-        char *prop_str = RNA_path_property_py(ptr, prop, index);
+        std::string prop_str = RNA_path_property_py(ptr, prop, index);
         if (prop_str[0] == '[') {
-          member_id_data_path = fmt::format("{}.{}", data_path, prop_str);
+          member_id_data_path = fmt::format("{}.{}", *data_path, prop_str);
         }
         else {
-          member_id_data_path = fmt::format("{}.{}.{}", member_id, data_path, prop_str);
+          member_id_data_path = fmt::format("{}.{}.{}", member_id, *data_path, prop_str);
         }
-        MEM_freeN(prop_str);
       }
       else {
-        member_id_data_path = fmt::format("{}.{}", member_id, data_path);
+        member_id_data_path = fmt::format("{}.{}", member_id, *data_path);
       }
-      MEM_freeN(data_path);
     }
   }
   else {
     if (prop != nullptr) {
-      char *prop_str = RNA_path_property_py(ptr, prop, index);
+      std::string prop_str = RNA_path_property_py(ptr, prop, index);
       if (prop_str[0] == '[') {
         member_id_data_path = fmt::format("{}{}", member_id, prop_str);
       }
       else {
         member_id_data_path = fmt::format("{}.{}", member_id, prop_str);
       }
-      MEM_freeN(prop_str);
     }
     else {
       member_id_data_path = member_id;
@@ -673,22 +667,17 @@ std::optional<std::string> WM_prop_pystring_assign(bContext *C,
 
   if (!lhs.has_value()) {
     /* Fallback to `bpy.data.foo[id]` if we don't find in the context. */
-    if (char *lhs_cstr = RNA_path_full_property_py(ptr, prop, index)) {
-      lhs = lhs_cstr;
-      MEM_freeN(lhs_cstr);
+    if (std::optional<std::string> lhs_str = RNA_path_full_property_py(ptr, prop, index)) {
+      lhs = lhs_str;
     }
     else {
       return std::nullopt;
     }
   }
 
-  char *rhs = RNA_property_as_string(C, ptr, prop, index, INT_MAX);
-  if (!rhs) {
-    return std::nullopt;
-  }
+  std::string rhs = RNA_property_as_string(C, ptr, prop, index, INT_MAX);
 
   std::string ret = fmt::format("{} = {}", lhs.value(), rhs);
-  MEM_freeN(rhs);
   return ret;
 }
 
@@ -1523,12 +1512,12 @@ static uiBlock *wm_block_dialog_create(bContext *C, ARegion *region, void *user_
       BLF_width(style->widget.uifont_id, data->title.c_str(), BLF_DRAW_STR_DUMMY_MAX));
 
   /* Break Message into multiple lines. */
-  std::vector<std::string> message_lines;
+  blender::Vector<std::string> message_lines;
   blender::StringRef messaged_trimmed = blender::StringRef(data->message).trim();
   std::istringstream message_stream(messaged_trimmed);
   std::string line;
   while (std::getline(message_stream, line)) {
-    message_lines.push_back(line);
+    message_lines.append(line);
     text_width = std::max(
         text_width, int(BLF_width(style->widget.uifont_id, line.c_str(), BLF_DRAW_STR_DUMMY_MAX)));
   }
@@ -1554,6 +1543,11 @@ static uiBlock *wm_block_dialog_create(bContext *C, ARegion *region, void *user_
   /* Title. */
   if (!data->title.empty()) {
     uiItemL_ex(layout, data->title.c_str(), ICON_NONE, true, false);
+
+    /* Line under the title if there are properties but no message body. */
+    if (data->include_properties && message_lines.size() == 0) {
+      uiItemS_ex(layout, 0.2f, LayoutSeparatorType::Line);
+    };
   }
 
   /* Message lines. */
@@ -1562,6 +1556,7 @@ static uiBlock *wm_block_dialog_create(bContext *C, ARegion *region, void *user_
   }
 
   if (data->include_properties) {
+    uiItemS_ex(layout, 0.5f);
     uiTemplateOperatorPropertyButs(C, layout, op, UI_BUT_LABEL_ALIGN_SPLIT_COLUMN, 0);
   }
 
@@ -1797,16 +1792,19 @@ int WM_operator_props_popup(bContext *C, wmOperator *op, const wmEvent * /*event
   return wm_operator_props_popup_ex(C, op, false, true);
 }
 
-int WM_operator_props_dialog_popup(
-    bContext *C, wmOperator *op, int width, const char *title, const char *confirm_text)
+int WM_operator_props_dialog_popup(bContext *C,
+                                   wmOperator *op,
+                                   int width,
+                                   std::optional<std::string> title,
+                                   std::optional<std::string> confirm_text)
 {
   wmOpPopUp *data = MEM_new<wmOpPopUp>(__func__);
   data->op = op;
   data->width = int(float(width) * UI_SCALE_FAC * UI_style_get()->widgetlabel.points /
                     UI_DEFAULT_TEXT_POINTS);
   data->free_op = true; /* if this runs and gets registered we may want not to free it */
-  data->title = (title == nullptr) ? WM_operatortype_name(op->type, op->ptr) : title;
-  data->confirm_text = (confirm_text == nullptr) ? IFACE_("OK") : confirm_text;
+  data->title = title ? std::move(*title) : WM_operatortype_name(op->type, op->ptr);
+  data->confirm_text = confirm_text ? std::move(*confirm_text) : IFACE_("OK");
   data->icon = ALERT_ICON_NONE;
   data->size = WM_POPUP_SIZE_SMALL;
   data->position = WM_POPUP_POSITION_MOUSE;
@@ -1814,7 +1812,7 @@ int WM_operator_props_dialog_popup(
   data->mouse_move_quit = false;
   data->include_properties = true;
 
-  /* op is not executed until popup OK but is clicked */
+  /* The operator is not executed until popup OK button is clicked. */
   UI_popup_block_ex(
       C, wm_block_dialog_create, wm_operator_ui_popup_ok, wm_operator_ui_popup_cancel, data, op);
 
@@ -3614,7 +3612,7 @@ static int redraw_timer_exec(bContext *C, wmOperator *op)
 
   WM_cursor_wait(true);
 
-  double time_start = BLI_check_seconds_timer();
+  double time_start = BLI_time_now_seconds();
 
   wm_window_make_drawable(wm, win);
 
@@ -3624,14 +3622,14 @@ static int redraw_timer_exec(bContext *C, wmOperator *op)
     iter_steps += 1;
 
     if (time_limit != 0.0) {
-      if ((BLI_check_seconds_timer() - time_start) > time_limit) {
+      if ((BLI_time_now_seconds() - time_start) > time_limit) {
         break;
       }
       a = 0;
     }
   }
 
-  double time_delta = (BLI_check_seconds_timer() - time_start) * 1000;
+  double time_delta = (BLI_time_now_seconds() - time_start) * 1000;
 
   RNA_enum_description(redraw_timer_type_items, type, &infostr);
 

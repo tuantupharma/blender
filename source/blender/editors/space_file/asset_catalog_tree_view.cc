@@ -16,7 +16,7 @@
 
 #include "BLI_string_ref.hh"
 
-#include "BLT_translation.h"
+#include "BLT_translation.hh"
 
 #include "ED_asset.hh"
 #include "ED_fileselect.hh"
@@ -181,11 +181,14 @@ class AssetCatalogTreeViewUnassignedItem : public ui::BasicTreeViewItem {
 AssetCatalogTreeView::AssetCatalogTreeView(asset_system::AssetLibrary *library,
                                            FileAssetSelectParams *params,
                                            SpaceFile &space_file)
-    : asset_library_(library),
-      catalog_tree_(AS_asset_library_get_catalog_tree(library)),
-      params_(params),
-      space_file_(space_file)
+    : asset_library_(library), params_(params), space_file_(space_file)
 {
+  if (library && library->catalog_service) {
+    catalog_tree_ = library->catalog_service->get_catalog_tree();
+  }
+  else {
+    catalog_tree_ = nullptr;
+  }
 }
 
 void AssetCatalogTreeView::build_tree()
@@ -406,9 +409,8 @@ std::string AssetCatalogDropTarget::drop_tooltip_asset_catalog(const wmDrag &dra
   BLI_assert(drag.type == WM_DRAG_ASSET_CATALOG);
   const AssetCatalog *src_catalog = get_drag_catalog(drag, get_asset_library());
 
-  return fmt::format(TIP_("Move catalog {} into {}"),
-                     std::string_view(src_catalog->path.name()),
-                     std::string_view(catalog_item_.get_name()));
+  return fmt::format(
+      TIP_("Move catalog {} into {}"), src_catalog->path.name(), catalog_item_.get_name());
 }
 
 std::string AssetCatalogDropTarget::drop_tooltip_asset_list(const wmDrag &drag) const
@@ -503,8 +505,7 @@ AssetCatalog *AssetCatalogDropTarget::get_drag_catalog(
   if (drag.type != WM_DRAG_ASSET_CATALOG) {
     return nullptr;
   }
-  const AssetCatalogService *catalog_service = AS_asset_library_get_catalog_service(
-      &asset_library);
+  const AssetCatalogService *catalog_service = asset_library.catalog_service.get();
   const wmDragAssetCatalog *catalog_drag = WM_drag_get_asset_catalog_data(&drag);
 
   return catalog_service->find_catalog(catalog_drag->drag_catalog_id);
@@ -623,7 +624,7 @@ std::string AssetCatalogTreeViewAllItem::DropTarget::drop_tooltip(
       drag_info.drag_data, *get_view<AssetCatalogTreeView>().asset_library_);
 
   return fmt::format(TIP_("Move catalog {} to the top level of the tree"),
-                     std::string_view(drag_catalog->path.name()));
+                     drag_catalog->path.name());
 }
 
 bool AssetCatalogTreeViewAllItem::DropTarget::on_drop(bContext * /*C*/,
