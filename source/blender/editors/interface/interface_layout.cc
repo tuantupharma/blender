@@ -1112,13 +1112,14 @@ static uiBut *ui_item_with_label(uiLayout *layout,
                          0,
                          nullptr);
     UI_but_func_set(but, ui_keymap_but_cb, but, nullptr);
-    if (flag & UI_ITEM_R_IMMEDIATE) {
-      UI_but_flag_enable(but, UI_BUT_ACTIVATE_ON_INIT);
-    }
   }
   else {
     const char *str = (type == PROP_ENUM && !(flag & UI_ITEM_R_ICON_ONLY)) ? nullptr : "";
     but = uiDefAutoButR(block, ptr, prop, index, str, icon, x, y, prop_but_width, h);
+  }
+
+  if (flag & UI_ITEM_R_IMMEDIATE) {
+    UI_but_flag_enable(but, UI_BUT_ACTIVATE_ON_INIT);
   }
 
 #ifdef UI_PROP_DECORATE
@@ -3412,25 +3413,11 @@ void uiItemV(uiLayout *layout, const char *name, int icon, int argval)
   const int w = ui_text_icon_width(layout, name, icon, false);
 
   if (icon && name[0]) {
-    uiDefIconTextButI(block,
-                      UI_BTYPE_BUT,
-                      argval,
-                      icon,
-                      name,
-                      0,
-                      0,
-                      w,
-                      UI_UNIT_Y,
-                      retvalue,
-                      0.0,
-                      0.0,
-                      0,
-                      -1,
-                      "");
+    uiDefIconTextButI(
+        block, UI_BTYPE_BUT, argval, icon, name, 0, 0, w, UI_UNIT_Y, retvalue, 0.0, 0.0, "");
   }
   else if (icon) {
-    uiDefIconButI(
-        block, UI_BTYPE_BUT, argval, icon, 0, 0, w, UI_UNIT_Y, retvalue, 0.0, 0.0, 0, -1, "");
+    uiDefIconButI(block, UI_BTYPE_BUT, argval, icon, 0, 0, w, UI_UNIT_Y, retvalue, 0.0, 0.0, "");
   }
   else {
     uiDefButI(
