@@ -3749,8 +3749,6 @@ static uiBlock *block_create_autorun_warning(bContext *C, ARegion *region, void 
                            nullptr,
                            0,
                            0,
-                           0,
-                           0,
                            TIP_("Reload file with execution of Python scripts enabled"));
     UI_but_func_set(
         but, [block](bContext &C) { wm_block_autorun_warning_reload_with_scripts(&C, block); });
@@ -3766,8 +3764,6 @@ static uiBlock *block_create_autorun_warning(bContext *C, ARegion *region, void 
                            50,
                            UI_UNIT_Y,
                            nullptr,
-                           0,
-                           0,
                            0,
                            0,
                            TIP_("Enable scripts"));
@@ -3787,8 +3783,6 @@ static uiBlock *block_create_autorun_warning(bContext *C, ARegion *region, void 
                          50,
                          UI_UNIT_Y,
                          nullptr,
-                         0,
-                         0,
                          0,
                          0,
                          TIP_("Continue using file without Python scripts"));
@@ -3864,6 +3858,11 @@ void wm_test_autorun_warning(bContext *C)
   wmWindow *win = (wm->winactive) ? wm->winactive : static_cast<wmWindow *>(wm->windows.first);
 
   if (win) {
+    /* We want this warning on the Main window, not a child window even if active. See #118765. */
+    if (win->parent) {
+      win = win->parent;
+    }
+
     wmWindow *prevwin = CTX_wm_window(C);
     CTX_wm_window_set(C, win);
     UI_popup_block_invoke(C, block_create_autorun_warning, nullptr, nullptr);
@@ -3933,21 +3932,8 @@ static void save_file_forwardcompat_cancel(bContext *C, void *arg_block, void * 
 
 static void save_file_forwardcompat_cancel_button(uiBlock *block, wmGenericCallback *post_action)
 {
-  uiBut *but = uiDefIconTextBut(block,
-                                UI_BTYPE_BUT,
-                                0,
-                                ICON_NONE,
-                                IFACE_("Cancel"),
-                                0,
-                                0,
-                                0,
-                                UI_UNIT_Y,
-                                nullptr,
-                                0,
-                                0,
-                                0,
-                                0,
-                                "");
+  uiBut *but = uiDefIconTextBut(
+      block, UI_BTYPE_BUT, 0, ICON_NONE, IFACE_("Cancel"), 0, 0, 0, UI_UNIT_Y, nullptr, 0, 0, "");
   UI_but_func_set(but, save_file_forwardcompat_cancel, block, post_action);
   UI_but_drawflag_disable(but, UI_BUT_TEXT_LEFT);
 }
@@ -3990,8 +3976,6 @@ static void save_file_forwardcompat_overwrite_button(uiBlock *block,
                                 nullptr,
                                 0,
                                 0,
-                                0,
-                                0,
                                 "");
   UI_but_func_set(but, save_file_forwardcompat_overwrite, block, post_action);
   UI_but_drawflag_disable(but, UI_BUT_TEXT_LEFT);
@@ -4018,8 +4002,6 @@ static void save_file_forwardcompat_saveas_button(uiBlock *block, wmGenericCallb
                                 0,
                                 UI_UNIT_Y,
                                 nullptr,
-                                0,
-                                0,
                                 0,
                                 0,
                                 "");
@@ -4185,21 +4167,8 @@ static void wm_block_file_close_save(bContext *C, void *arg_block, void *arg_dat
 
 static void wm_block_file_close_cancel_button(uiBlock *block, wmGenericCallback *post_action)
 {
-  uiBut *but = uiDefIconTextBut(block,
-                                UI_BTYPE_BUT,
-                                0,
-                                ICON_NONE,
-                                IFACE_("Cancel"),
-                                0,
-                                0,
-                                0,
-                                UI_UNIT_Y,
-                                nullptr,
-                                0,
-                                0,
-                                0,
-                                0,
-                                "");
+  uiBut *but = uiDefIconTextBut(
+      block, UI_BTYPE_BUT, 0, ICON_NONE, IFACE_("Cancel"), 0, 0, 0, UI_UNIT_Y, nullptr, 0, 0, "");
   UI_but_func_set(but, wm_block_file_close_cancel, block, post_action);
   UI_but_drawflag_disable(but, UI_BUT_TEXT_LEFT);
 }
@@ -4216,8 +4185,6 @@ static void wm_block_file_close_discard_button(uiBlock *block, wmGenericCallback
                                 0,
                                 UI_UNIT_Y,
                                 nullptr,
-                                0,
-                                0,
                                 0,
                                 0,
                                 "");
@@ -4241,8 +4208,6 @@ static void wm_block_file_close_save_button(uiBlock *block,
       0,
       UI_UNIT_Y,
       nullptr,
-      0,
-      0,
       0,
       0,
       "");
