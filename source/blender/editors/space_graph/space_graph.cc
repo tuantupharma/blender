@@ -31,8 +31,8 @@
 #include "ED_space_api.hh"
 #include "ED_time_scrub_ui.hh"
 
-#include "GPU_immediate.h"
-#include "GPU_state.h"
+#include "GPU_immediate.hh"
+#include "GPU_state.hh"
 
 #include "WM_api.hh"
 #include "WM_message.hh"
@@ -821,8 +821,8 @@ static void graph_id_remap(ScrArea * /*area*/,
     return;
   }
 
-  mappings.apply((ID **)&sgraph->ads->filter_grp, ID_REMAP_APPLY_DEFAULT);
-  mappings.apply((ID **)&sgraph->ads->source, ID_REMAP_APPLY_DEFAULT);
+  mappings.apply(reinterpret_cast<ID **>(&sgraph->ads->filter_grp), ID_REMAP_APPLY_DEFAULT);
+  mappings.apply(reinterpret_cast<ID **>(&sgraph->ads->source), ID_REMAP_APPLY_DEFAULT);
 }
 
 static void graph_foreach_id(SpaceLink *space_link, LibraryForeachIDData *data)

@@ -155,6 +155,7 @@ class OBJECT_MT_modifier_add_generate(ModifierAddMenu, Menu):
             self.operator_modifier_add(layout, 'WIREFRAME')
         if ob_type == 'GREASEPENCIL':
             self.operator_modifier_add(layout, 'GREASE_PENCIL_ARRAY')
+            self.operator_modifier_add(layout, 'GREASE_PENCIL_BUILD')
             self.operator_modifier_add(layout, 'GREASE_PENCIL_DASH')
             self.operator_modifier_add(layout, 'GREASE_PENCIL_ENVELOPE')
             self.operator_modifier_add(layout, 'GREASE_PENCIL_LENGTH')
@@ -205,6 +206,7 @@ class OBJECT_MT_modifier_add_deform(ModifierAddMenu, Menu):
             self.operator_modifier_add(layout, 'GREASE_PENCIL_LATTICE')
             self.operator_modifier_add(layout, 'GREASE_PENCIL_NOISE')
             self.operator_modifier_add(layout, 'GREASE_PENCIL_OFFSET')
+            self.operator_modifier_add(layout, 'GREASE_PENCIL_SHRINKWRAP')
             self.operator_modifier_add(layout, 'GREASE_PENCIL_SMOOTH')
             self.operator_modifier_add(layout, 'GREASE_PENCIL_THICKNESS')
         layout.template_modifier_asset_menu_items(catalog_path=self.bl_label)
