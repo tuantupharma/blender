@@ -1867,6 +1867,8 @@ typedef struct SceneEEVEE {
   int fast_gi_step_count;
   int fast_gi_ray_count;
   float fast_gi_distance;
+  float fast_gi_thickness_near;
+  float fast_gi_thickness_far;
   char fast_gi_method;
   char _pad0[3];
 
@@ -1906,11 +1908,6 @@ typedef struct SceneEEVEE {
   int ray_tracing_method;
 
   struct RaytraceEEVEE ray_tracing_options;
-
-  struct LightCache *light_cache DNA_DEPRECATED;
-  struct LightCache *light_cache_data;
-  /* Need a 128 byte string for some translations of some messages. */
-  char light_cache_info[128];
 
   float overscan;
   float light_threshold;
@@ -2826,7 +2823,7 @@ enum {
   SCE_EEVEE_GTAO_BENT_NORMALS = (1 << 5),
   SCE_EEVEE_GTAO_BOUNCE = (1 << 6),
   // SCE_EEVEE_DOF_ENABLED = (1 << 7), /* Moved to camera->dof.flag */
-  SCE_EEVEE_BLOOM_ENABLED = (1 << 8),
+  // SCE_EEVEE_BLOOM_ENABLED = (1 << 8), /* Unused */
   SCE_EEVEE_MOTION_BLUR_ENABLED_DEPRECATED = (1 << 9), /* Moved to scene->r.mode */
   SCE_EEVEE_SHADOW_HIGH_BITDEPTH = (1 << 10),
   SCE_EEVEE_TAA_REPROJECTION = (1 << 11),
