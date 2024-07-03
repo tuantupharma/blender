@@ -1368,6 +1368,11 @@ uiBut *uiDefIconTextButO_ptr(uiBlock *block,
                              short height,
                              const char *tip);
 
+void UI_but_operator_set(uiBut *but,
+                         wmOperatorType *optype,
+                         wmOperatorCallContext opcontext,
+                         const PointerRNA *opptr = nullptr);
+
 /** For passing inputs to ButO buttons. */
 PointerRNA *UI_but_operator_ptr_ensure(uiBut *but);
 
@@ -1407,10 +1412,6 @@ std::string UI_but_extra_icon_string_get_label(const uiButExtraOpIcon &extra_ico
 std::string UI_but_extra_icon_string_get_tooltip(bContext &C, const uiButExtraOpIcon &extra_icon);
 std::string UI_but_extra_icon_string_get_operator_keymap(const bContext &C,
                                                          const uiButExtraOpIcon &extra_icon);
-
-/* Edit i18n stuff. */
-/* Name of the main py op from i18n addon. */
-#define EDTSRC_I18N_OP_NAME "UI_OT_edittranslation"
 
 /**
  * Special Buttons
@@ -2731,10 +2732,7 @@ void uiTemplateLightLinkingCollection(uiLayout *layout,
                                       const char *propname);
 
 void uiTemplateBoneCollectionTree(uiLayout *layout, bContext *C);
-
-#ifdef WITH_GREASE_PENCIL_V3
 void uiTemplateGreasePencilLayerTree(uiLayout *layout, bContext *C);
-#endif
 
 void uiTemplateNodeTreeInterface(uiLayout *layout, PointerRNA *ptr);
 /**
@@ -3195,7 +3193,7 @@ void UI_fontstyle_draw(const uiFontStyle *fs,
                        const uchar col[4],
                        const uiFontStyleDraw_Params *fs_params);
 /**
- * Drawn same as above, but at 90 degree angle.
+ * Drawn same as #UI_fontstyle_draw, but at 90 degree angle.
  */
 void UI_fontstyle_draw_rotated(const uiFontStyle *fs,
                                const rcti *rect,
@@ -3406,3 +3404,4 @@ blender::ui::AbstractViewItem *UI_region_views_find_item_at(const ARegion &regio
                                                             const int xy[2]);
 blender::ui::AbstractViewItem *UI_region_views_find_active_item(const ARegion *region);
 uiBut *UI_region_views_find_active_item_but(const ARegion *region);
+void UI_region_views_clear_search_highlight(const ARegion *region);

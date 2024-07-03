@@ -1132,12 +1132,15 @@ class WM_OT_url_open_preset(Operator):
         (('FUND', iface_("Development Fund"),
           tip_("The donation program to support maintenance and improvements")),
          "https://fund.blender.org"),
-        (('BLENDER', iface_("blender.org"),
+        (('BLENDER', "blender.org",
           tip_("Blender's official web-site")),
          "https://www.blender.org"),
         (('CREDITS', iface_("Credits"),
           tip_("Lists committers to Blender's source code")),
          "https://www.blender.org/about/credits/"),
+        (('EXTENSIONS', iface_("Extensions Platform"),
+          tip_("Online directory of free and open source extensions")),
+         "https://extensions.blender.org/"),
     ]
 
     def execute(self, context):
@@ -2650,8 +2653,8 @@ class BatchRenameAction(bpy.types.PropertyGroup):
     )
 
     # Weak, add/remove as properties.
-    op_add: BoolProperty(name="Add")
-    op_remove: BoolProperty(name="Remove")
+    op_add: BoolProperty(name="Add", translation_context=i18n_contexts.operator_default)
+    op_remove: BoolProperty(name="Remove", translation_context=i18n_contexts.operator_default)
 
 
 class WM_OT_batch_rename(Operator):

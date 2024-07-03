@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 4.2.0 Beta (b'a2795852cd29')\n"
+"Project-Id-Version: Blender 4.2.0 Beta (b'78330522d2ae')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-06-10 10:16+0000\n"
+"POT-Creation-Date: 2024-07-01 09:24+0000\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -260,6 +260,14 @@ msgstr "Täysi"
 
 msgid "Auto"
 msgstr "Automaattinen"
+
+
+msgid "Always"
+msgstr "Aina"
+
+
+msgid "Center"
+msgstr "Keskus"
 
 
 msgid "Fribidi Library"
@@ -2086,8 +2094,9 @@ msgid "Curve Radius"
 msgstr "Käyrän säde"
 
 
-msgid "Remove"
-msgstr "Poista"
+msgctxt "Operator"
+msgid "Add"
+msgstr "Lisää"
 
 
 msgid "Minimum Distance"
@@ -2528,10 +2537,6 @@ msgstr "Vasen"
 
 msgid "Right"
 msgstr "Oikea"
-
-
-msgid "Center"
-msgstr "Keskus"
 
 
 msgid "Child Particle"
@@ -3257,10 +3262,6 @@ msgstr "Lukitut akselit"
 
 msgid "Free Axis"
 msgstr "Vapaat akselit"
-
-
-msgid "Always"
-msgstr "Aina"
 
 
 msgid "-X Rotation"
@@ -4618,10 +4619,6 @@ msgid "Add liquid"
 msgstr "Lisää neste"
 
 
-msgid "UV"
-msgstr "UV"
-
-
 msgid "Silhouette"
 msgstr "Siluetti"
 
@@ -4672,6 +4669,10 @@ msgstr "Teksti"
 
 msgid "World"
 msgstr "Maailma"
+
+
+msgid "Theme"
+msgstr "Teema"
 
 
 msgid "Push"
@@ -4742,14 +4743,13 @@ msgid "Move to Layer"
 msgstr "Siirrä tasolle"
 
 
+msgid "UV"
+msgstr "UV"
+
+
 msgctxt "WindowManager"
 msgid "Area"
 msgstr "Alue"
-
-
-msgctxt "Operator"
-msgid "Add"
-msgstr "Lisää"
 
 
 msgid "Utilities"
@@ -4835,6 +4835,11 @@ msgstr "Tallenna & lataa"
 
 msgid "Names"
 msgstr "Nimet"
+
+
+msgctxt "Operator"
+msgid "Parent"
+msgstr "Isäntä"
 
 
 msgid "Select More/Less"
@@ -7271,6 +7276,10 @@ msgid "Only Curves"
 msgstr "Vain käyriä"
 
 
+msgid "Remove"
+msgstr "Poista"
+
+
 msgid "Handle Length"
 msgstr "Kahvan pituus"
 
@@ -7393,6 +7402,11 @@ msgstr "UV-taso"
 msgctxt "Operator"
 msgid "Monkey"
 msgstr "Apina"
+
+
+msgctxt "Operator"
+msgid "New"
+msgstr "Uusi"
 
 
 msgid "Column"
@@ -7539,10 +7553,6 @@ msgstr "Näkymä"
 
 msgid "AOV"
 msgstr "AOV"
-
-
-msgid "Theme"
-msgstr "Teema"
 
 
 msgid "Active AOV"
@@ -7742,6 +7752,26 @@ msgid "Limit to"
 msgstr "Rajoita"
 
 
+msgid "Description:"
+msgstr "Kuvaus­:"
+
+
+msgid "Internet:"
+msgstr "Internet:"
+
+
+msgid "Version:"
+msgstr "Versio:"
+
+
+msgid "Warning:"
+msgstr "Varoitus:"
+
+
+msgid "File:"
+msgstr "Tiedosto:"
+
+
 msgid "HP Reverb G2"
 msgstr "HP Reverb G2"
 
@@ -7771,11 +7801,6 @@ msgstr "Vie..."
 msgctxt "WindowManager"
 msgid "Add New"
 msgstr "Lisää uusi"
-
-
-msgctxt "Operator"
-msgid "New"
-msgstr "Uusi"
 
 
 msgctxt "Operator"
@@ -7889,11 +7914,6 @@ msgstr "Isäntä:"
 
 msgid "Transform:"
 msgstr "Muutos:"
-
-
-msgctxt "Operator"
-msgid "Parent"
-msgstr "Isäntä"
 
 
 msgctxt "Operator"
@@ -8372,28 +8392,8 @@ msgid "Error (see console)"
 msgstr "Virhe (katso konsoli)"
 
 
-msgid "Description:"
-msgstr "Kuvaus­:"
-
-
 msgid "Location:"
 msgstr "Sijainti:"
-
-
-msgid "File:"
-msgstr "Tiedosto:"
-
-
-msgid "Version:"
-msgstr "Versio:"
-
-
-msgid "Warning:"
-msgstr "Varoitus:"
-
-
-msgid "Internet:"
-msgstr "Internet:"
 
 
 msgctxt "Operator"
