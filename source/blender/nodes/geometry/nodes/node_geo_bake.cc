@@ -115,8 +115,8 @@ static bool node_insert_link(bNodeTree *ntree, bNode *node, bNodeLink *link)
 
 static const CPPType &get_item_cpp_type(const eNodeSocketDatatype socket_type)
 {
-  const char *socket_idname = bke::nodeStaticSocketType(socket_type, 0);
-  const bke::bNodeSocketType *typeinfo = bke::nodeSocketTypeFind(socket_idname);
+  const char *socket_idname = bke::node_static_socket_type(socket_type, 0);
+  const bke::bNodeSocketType *typeinfo = bke::node_socket_type_find(socket_idname);
   BLI_assert(typeinfo);
   BLI_assert(typeinfo->geometry_nodes_cpp_type);
   return *typeinfo->geometry_nodes_cpp_type;
@@ -249,6 +249,29 @@ static bake::BakeSocketConfig make_bake_socket_config(const Span<NodeGeometryBak
   return config;
 }
 
+/**
+ * This is used when the bake node should just pass-through the data and the caller of geometry
+ * nodes should not have to care about this.
+ */
+struct DummyDataBlockMap : public bake::BakeDataBlockMap {
+ private:
+  std::mutex mutex_;
+  Map<bake::BakeDataBlockID, ID *> map_;
+
+ public:
+  ID *lookup_or_remember_missing(const bake::BakeDataBlockID &key) override
+  {
+    std::lock_guard lock{mutex_};
+    return map_.lookup_default(key, nullptr);
+  }
+
+  void try_add(ID &id) override
+  {
+    std::lock_guard lock{mutex_};
+    map_.add(bake::BakeDataBlockID(id), &id);
+  }
+};
+
 class LazyFunctionForBakeNode final : public LazyFunction {
   const bNode &node_;
   Span<NodeGeometryBakeItem> bake_items_;
@@ -298,7 +321,8 @@ class LazyFunctionForBakeNode final : public LazyFunction {
       return;
     }
     if (found_id->is_in_loop) {
-      this->set_default_outputs(params);
+      DummyDataBlockMap data_block_map;
+      this->pass_through(params, user_data, &data_block_map);
       return;
     }
     BakeNodeBehavior *behavior = user_data.call_data->bake_params->get(found_id->id);
@@ -627,7 +651,7 @@ static void node_register()
   ntype.gather_link_search_ops = node_gather_link_searches;
   blender::bke::node_type_storage(
       &ntype, "NodeGeometryBake", node_free_storage, node_copy_storage);
-  blender::bke::nodeRegisterType(&ntype);
+  blender::bke::node_register_type(&ntype);
 }
 NOD_REGISTER_NODE(node_register)
 
