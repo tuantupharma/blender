@@ -210,9 +210,10 @@ void DebugDraw::draw_line(float3 v1, float3 v2, uint color)
   }
 }
 
-/* Keep in sync with drw_debug_color_pack(). */
 uint DebugDraw::color_pack(float4 color)
 {
+  /* NOTE: keep in sync with #drw_debug_color_pack(). */
+
   color = math::clamp(color, 0.0f, 1.0f);
   uint result = 0;
   result |= uint(color.x * 255.0f) << 0u;
@@ -247,7 +248,7 @@ void DebugDraw::display_lines()
   cpu_draw_buf_.push_update();
 
   float4x4 persmat;
-  const DRWView *view = DRW_view_get_active();
+  const DRWView *view = DRW_view_default_get();
   DRW_view_persmat_get(view, persmat.ptr(), false);
 
   drw_state_set(DRW_STATE_WRITE_COLOR | DRW_STATE_WRITE_DEPTH | DRW_STATE_DEPTH_LESS);
@@ -315,11 +316,10 @@ void drw_debug_draw()
 #endif
 }
 
-/**
- * NOTE: Init is once per draw manager cycle.
- */
 void drw_debug_init()
 {
+  /* NOTE: Init is once per draw manager cycle. */
+
   /* Module should not be used in release builds. */
   /* TODO(@fclem): Hide the functions declarations without using `ifdefs` everywhere. */
 #ifdef DRAW_DEBUG
