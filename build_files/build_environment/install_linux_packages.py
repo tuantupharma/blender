@@ -3,6 +3,10 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+__all__ = (
+    "main",
+)
+
 import logging
 import os
 import re
@@ -531,8 +535,8 @@ DEPS_OPTIONAL_SUBPACKAGES = (
 )
 
 
-# Python packages that should be available for Blender pyscripts.
-# Suse uses names like `python310-Cython` for its python module packages...
+# Python packages that should be available for Blender Pythons-scripts.
+# SUSE uses names like `python310-Cython` for its python module packages...
 def suse_pypackages_name_gen(name):
     def _gen(package, parent_packages):
         pp = parent_packages[-1]
@@ -867,9 +871,9 @@ PACKAGES_ALL = (
                                     ),
                             Package(name="NanoVDB Library", is_mandatory=False,
                                     distro_package_names={DISTRO_ID_DEBIAN: "libnanovdb-dev",
-                                                          DISTRO_ID_FEDORA: ...,  # Part of openvdb package.
+                                                          DISTRO_ID_FEDORA: ...,  # Part of OpenVDB package.
                                                           DISTRO_ID_SUSE: None,
-                                                          DISTRO_ID_ARCH: ...,   # Part of openvdb package.
+                                                          DISTRO_ID_ARCH: ...,   # Part of OpenVDB package.
                                                           },
                                     ),
                         ),
@@ -917,7 +921,7 @@ PACKAGES_ALL = (
                                   },
             ),
     Package(name="Embree Library", is_mandatory=False,
-            version="4.3.2", version_short="4.3", version_min="3.13", version_mex="5.0",
+            version="4.3.3", version_short="4.3", version_min="4.3", version_mex="5.0",
             sub_packages=(),
             distro_package_names={DISTRO_ID_DEBIAN: "libembree-dev",
                                   DISTRO_ID_FEDORA: "embree-devel",
@@ -926,7 +930,7 @@ PACKAGES_ALL = (
                                   },
             ),
     Package(name="OpenImageDenoiser Library", is_mandatory=False,
-            version="2.3.0", version_short="2.3", version_min="2.0.0", version_mex="3.0",
+            version="2.3.2", version_short="2.3", version_min="2.0.0", version_mex="3.0",
             sub_packages=(),
             distro_package_names={DISTRO_ID_DEBIAN: None,
                                   DISTRO_ID_FEDORA: "oidn-devel",
@@ -935,11 +939,11 @@ PACKAGES_ALL = (
                                   },
             ),
     Package(name="Level Zero Library", is_mandatory=False,
-            version="1.16.1", version_short="1.16", version_min="1.7", version_mex="2.0",
+            version="1.19.2", version_short="1.19", version_min="1.7", version_mex="2.0",
             sub_packages=(),
-            distro_package_names={DISTRO_ID_DEBIAN: None,
+            distro_package_names={DISTRO_ID_DEBIAN: "libze-dev",
                                   DISTRO_ID_FEDORA: "oneapi-level-zero-devel",
-                                  DISTRO_ID_SUSE: None,
+                                  DISTRO_ID_SUSE: "level-zero-devel",
                                   DISTRO_ID_ARCH: "level-zero-headers",  # ???
                                   },
             ),
@@ -976,6 +980,15 @@ PACKAGES_ALL = (
                                   DISTRO_ID_FEDORA: "ffmpeg-free-devel",
                                   DISTRO_ID_SUSE: "ffmpeg-devel",
                                   DISTRO_ID_ARCH: "ffmpeg",
+                                  },
+            ),
+    Package(name="harfbuzz", is_mandatory=False,
+            version="10.0.1", version_short="10", version_min="5.1.0", version_mex="20.0.0",
+            sub_packages=(),
+            distro_package_names={DISTRO_ID_DEBIAN: "libharfbuzz-dev",
+                                  DISTRO_ID_FEDORA: "harfbuzz-devel",
+                                  DISTRO_ID_SUSE: "harfbuzz-devel",
+                                  DISTRO_ID_ARCH: "harfbuzz",
                                   },
             ),
 )

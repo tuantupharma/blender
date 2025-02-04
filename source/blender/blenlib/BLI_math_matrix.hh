@@ -12,6 +12,7 @@
 #include "BLI_math_matrix_types.hh"
 #include "BLI_math_rotation_types.hh"
 #include "BLI_math_vector.hh"
+#include "BLI_unroll.hh"
 
 namespace blender::math {
 
@@ -963,7 +964,7 @@ template<typename T> QuaternionBase<T> normalized_to_quat_with_checks(const MatB
   if (UNLIKELY(!std::isfinite(det))) {
     return QuaternionBase<T>::identity();
   }
-  else if (UNLIKELY(det < T(0))) {
+  if (UNLIKELY(det < T(0))) {
     return normalized_to_quat_fast(-mat);
   }
   return normalized_to_quat_fast(mat);

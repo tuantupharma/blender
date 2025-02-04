@@ -6,8 +6,6 @@
  * \ingroup sequencer
  */
 
-#include "BLI_math_vector.hh"
-
 #include "DNA_sequence_types.h"
 
 #include "IMB_imbuf.hh"
@@ -47,7 +45,7 @@ struct CrossEffectOp {
 };
 
 static ImBuf *do_cross_effect(const SeqRenderData *context,
-                              Sequence * /*seq*/,
+                              Strip * /*seq*/,
                               float /*timeline_frame*/,
                               float fac,
                               ImBuf *src1,
@@ -100,7 +98,7 @@ struct GammaCrossEffectOp {
 };
 
 static ImBuf *do_gammacross_effect(const SeqRenderData *context,
-                                   Sequence * /*seq*/,
+                                   Strip * /*seq*/,
                                    float /*timeline_frame*/,
                                    float fac,
                                    ImBuf *src1,

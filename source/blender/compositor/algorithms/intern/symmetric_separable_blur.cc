@@ -8,7 +8,6 @@
 #include "BLI_math_vector_types.hh"
 
 #include "GPU_shader.hh"
-#include "GPU_texture.hh"
 
 #include "COM_context.hh"
 #include "COM_result.hh"
@@ -84,6 +83,7 @@ static const char *get_blur_shader(const ResultType type)
     case ResultType::Float2:
     case ResultType::Float3:
     case ResultType::Int2:
+    case ResultType::Int:
       /* Not supported. */
       break;
   }
@@ -176,6 +176,7 @@ static Result horizontal_pass_cpu(Context &context,
     case ResultType::Float2:
     case ResultType::Float3:
     case ResultType::Int2:
+    case ResultType::Int:
       /* Not supported. */
       BLI_assert_unreachable();
       break;
@@ -263,6 +264,7 @@ static void vertical_pass_cpu(Context &context,
     case ResultType::Float2:
     case ResultType::Float3:
     case ResultType::Int2:
+    case ResultType::Int:
       /* Not supported. */
       BLI_assert_unreachable();
       break;

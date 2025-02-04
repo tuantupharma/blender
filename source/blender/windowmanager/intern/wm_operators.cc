@@ -16,7 +16,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
-#include <iostream>
 #include <sstream>
 
 #include <fmt/format.h>
@@ -40,12 +39,12 @@
 
 #include "BLT_translation.hh"
 
-#include "BLI_blenlib.h"
 #include "BLI_dial_2d.h"
-#include "BLI_math_matrix.hh"
 #include "BLI_math_rotation.h"
 #include "BLI_math_vector_types.hh"
-#include "BLI_string_utils.hh"
+#include "BLI_path_utils.hh"
+#include "BLI_string.h"
+#include "BLI_string_utf8.h"
 #include "BLI_time.h"
 #include "BLI_utildefines.h"
 
@@ -60,12 +59,11 @@
 #include "BKE_lib_id.hh"
 #include "BKE_lib_query.hh"
 #include "BKE_main.hh"
-#include "BKE_material.h"
+#include "BKE_material.hh"
 #include "BKE_preview_image.hh"
 #include "BKE_report.hh"
 #include "BKE_scene.hh"
 #include "BKE_screen.hh" /* #BKE_ST_MAXNAME. */
-#include "BKE_unit.hh"
 
 #include "BKE_idtype.hh"
 
@@ -99,6 +97,7 @@
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
+#include "WM_keymap.hh"
 #include "WM_types.hh"
 
 #include "wm.hh"
@@ -150,7 +149,7 @@ size_t WM_operator_py_idname(char *dst, const char *src)
 
 size_t WM_operator_bl_idname(char *dst, const char *src)
 {
-  const size_t from_len = size_t(strlen(src));
+  const size_t from_len = strlen(src);
 
   const char *sep = strchr(src, OP_PY_SEP_CHAR);
   if (sep && (from_len <= OP_MAX_PY_IDNAME)) {
@@ -513,7 +512,7 @@ static const char *wm_context_member_from_ptr(const bContext *C,
     const ID_Type ptr_id_type = GS(ptr->owner_id->name);
     switch (ptr_id_type) {
       case ID_SCE: {
-        TEST_PTR_DATA_TYPE_FROM_CONTEXT("active_sequence_strip", RNA_Sequence, ptr);
+        TEST_PTR_DATA_TYPE_FROM_CONTEXT("active_strip", RNA_Strip, ptr);
 
         CTX_TEST_PTR_ID(C, "scene", ptr->owner_id);
         break;
@@ -729,7 +728,7 @@ std::optional<std::string> WM_prop_pystring_assign(bContext *C,
 void WM_operator_properties_create_ptr(PointerRNA *ptr, wmOperatorType *ot)
 {
   /* Set the ID so the context can be accessed: see #STRUCT_NO_CONTEXT_WITHOUT_OWNER_ID. */
-  *ptr = RNA_pointer_create(static_cast<ID *>(G_MAIN->wm.first), ot->srna, nullptr);
+  *ptr = RNA_pointer_create_discrete(static_cast<ID *>(G_MAIN->wm.first), ot->srna, nullptr);
 }
 
 void WM_operator_properties_create(PointerRNA *ptr, const char *opstring)
@@ -741,7 +740,7 @@ void WM_operator_properties_create(PointerRNA *ptr, const char *opstring)
   }
   else {
     /* Set the ID so the context can be accessed: see #STRUCT_NO_CONTEXT_WITHOUT_OWNER_ID. */
-    *ptr = RNA_pointer_create(
+    *ptr = RNA_pointer_create_discrete(
         static_cast<ID *>(G_MAIN->wm.first), &RNA_OperatorProperties, nullptr);
   }
 }
@@ -1315,7 +1314,7 @@ IDProperty *WM_operator_last_properties_ensure_idprops(wmOperatorType *ot)
 void WM_operator_last_properties_ensure(wmOperatorType *ot, PointerRNA *ptr)
 {
   IDProperty *props = WM_operator_last_properties_ensure_idprops(ot);
-  *ptr = RNA_pointer_create(static_cast<ID *>(G_MAIN->wm.first), ot->srna, props);
+  *ptr = RNA_pointer_create_discrete(static_cast<ID *>(G_MAIN->wm.first), ot->srna, props);
 }
 
 ID *WM_operator_drop_load_path(bContext *C, wmOperator *op, const short idcode)
@@ -2478,7 +2477,7 @@ bool WM_paint_cursor_end(wmPaintCursor *handle)
 {
   wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   LISTBASE_FOREACH (wmPaintCursor *, pc, &wm->paintcursors) {
-    if (pc == (wmPaintCursor *)handle) {
+    if (pc == handle) {
       BLI_remlink(&wm->paintcursors, pc);
       MEM_freeN(pc);
       return true;
@@ -2543,7 +2542,7 @@ static void radial_control_update_header(wmOperator *op, bContext *C)
 
   if (hasNumInput(&rc->num_input)) {
     char num_str[NUM_STR_REP_LEN];
-    outputNumInput(&rc->num_input, num_str, &scene->unit);
+    outputNumInput(&rc->num_input, num_str, scene->unit);
     SNPRINTF(msg, "%s: %s", RNA_property_ui_name(rc->prop), num_str);
   }
   else {
@@ -2979,7 +2978,7 @@ static int radial_control_get_properties(bContext *C, wmOperator *op)
 {
   RadialControl *rc = static_cast<RadialControl *>(op->customdata);
 
-  PointerRNA ctx_ptr = RNA_pointer_create(nullptr, &RNA_Context, C);
+  PointerRNA ctx_ptr = RNA_pointer_create_discrete(nullptr, &RNA_Context, C);
 
   /* Check if we use primary or secondary path. */
   PointerRNA use_secondary_ptr;

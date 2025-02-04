@@ -28,7 +28,6 @@
 
 #include "NOD_derived_node_tree.hh"
 #include "NOD_multi_function.hh"
-#include "NOD_node_declaration.hh"
 
 #include "COM_context.hh"
 #include "COM_domain.hh"
@@ -58,6 +57,8 @@ static const CPPType &get_cpp_type(ResultType type)
   switch (type) {
     case ResultType::Float:
       return CPPType::get<float>();
+    case ResultType::Int:
+      return CPPType::get<int>();
     case ResultType::Vector:
     case ResultType::Color:
       return CPPType::get<float4>();
@@ -72,19 +73,75 @@ static const CPPType &get_cpp_type(ResultType type)
   return CPPType::get<float>();
 }
 
-/* Adds the single value parameter of the given input to the given parameter_builder. */
-static void add_single_value_parameter(mf::ParamsBuilder &parameter_builder, const Result &input)
+/* Adds the single value input parameter of the given input to the given parameter_builder. */
+static void add_single_value_input_parameter(mf::ParamsBuilder &parameter_builder,
+                                             const Result &input)
 {
   BLI_assert(input.is_single_value());
   switch (input.type()) {
     case ResultType::Float:
       parameter_builder.add_readonly_single_input_value(input.get_single_value<float>());
       return;
+    case ResultType::Int:
+      parameter_builder.add_readonly_single_input_value(input.get_single_value<int>());
+      return;
     case ResultType::Color:
       parameter_builder.add_readonly_single_input_value(input.get_single_value<float4>());
       return;
     case ResultType::Vector:
       parameter_builder.add_readonly_single_input_value(input.get_single_value<float4>());
+      return;
+    case ResultType::Float2:
+    case ResultType::Float3:
+    case ResultType::Int2:
+      /* Those types are internal and needn't be handled by operations. */
+      BLI_assert_unreachable();
+      break;
+  }
+}
+
+/* Adds the single value output parameter of the given output to the given parameter_builder. */
+static void add_single_value_output_parameter(mf::ParamsBuilder &parameter_builder, Result &output)
+{
+  output.allocate_single_value();
+  switch (output.type()) {
+    case ResultType::Float:
+      parameter_builder.add_uninitialized_single_output(&output.get_single_value<float>());
+      return;
+    case ResultType::Int:
+      parameter_builder.add_uninitialized_single_output(&output.get_single_value<int>());
+      return;
+    case ResultType::Color:
+      parameter_builder.add_uninitialized_single_output(&output.get_single_value<float4>());
+      return;
+    case ResultType::Vector:
+      parameter_builder.add_uninitialized_single_output(&output.get_single_value<float4>());
+      return;
+    case ResultType::Float2:
+    case ResultType::Float3:
+    case ResultType::Int2:
+      /* Those types are internal and needn't be handled by operations. */
+      BLI_assert_unreachable();
+      break;
+  }
+}
+
+/* Upload the single value output value to the GPU. The set_single_value method already does that,
+ * so we can call it on its own value. */
+static void upload_single_value_output_to_gpu(Result &output)
+{
+  switch (output.type()) {
+    case ResultType::Float:
+      output.set_single_value(output.get_single_value<float>());
+      return;
+    case ResultType::Int:
+      output.set_single_value(output.get_single_value<int>());
+      return;
+    case ResultType::Color:
+      output.set_single_value(output.get_single_value<float4>());
+      return;
+    case ResultType::Vector:
+      output.set_single_value(output.get_single_value<float4>());
       return;
     case ResultType::Float2:
     case ResultType::Float3:
@@ -102,29 +159,46 @@ void MultiFunctionProcedureOperation::execute()
   const IndexMask mask = IndexMask(size);
   mf::ParamsBuilder parameter_builder{*procedure_executor_, &mask};
 
+  const bool is_single_value = this->is_single_value_operation();
+
   /* For each of the parameters, either add an input or an output depending on its interface type,
    * allocating the outputs when needed. */
   for (int i = 0; i < procedure_.params().size(); i++) {
     if (procedure_.params()[i].type == mf::ParamType::InterfaceType::Input) {
       Result &input = get_input(parameter_identifiers_[i]);
       if (input.is_single_value()) {
-        add_single_value_parameter(parameter_builder, input);
+        add_single_value_input_parameter(parameter_builder, input);
       }
       else {
-        const GSpan span{get_cpp_type(input.type()), input.float_texture(), size};
+        const GSpan span{get_cpp_type(input.type()), input.data(), size};
         parameter_builder.add_readonly_single_input(span);
       }
     }
     else {
-      Result &result = get_result(parameter_identifiers_[i]);
-      result.allocate_texture(domain);
-      const GMutableSpan span{get_cpp_type(result.type()), result.float_texture(), size};
-      parameter_builder.add_uninitialized_single_output(span);
+      Result &output = get_result(parameter_identifiers_[i]);
+      if (is_single_value) {
+        add_single_value_output_parameter(parameter_builder, output);
+      }
+      else {
+        output.allocate_texture(domain);
+        const GMutableSpan span{get_cpp_type(output.type()), output.data(), size};
+        parameter_builder.add_uninitialized_single_output(span);
+      }
     }
   }
 
   mf::ContextBuilder context_builder;
   procedure_executor_->call_auto(mask, parameter_builder, context_builder);
+
+  /* In case of single value GPU execution, the single values need to be uploaded to the GPU. */
+  if (is_single_value && this->context().use_gpu()) {
+    for (int i = 0; i < procedure_.params().size(); i++) {
+      if (procedure_.params()[i].type == mf::ParamType::InterfaceType::Output) {
+        Result &output = get_result(parameter_identifiers_[i]);
+        upload_single_value_output_to_gpu(output);
+      }
+    }
+  }
 }
 
 void MultiFunctionProcedureOperation::build_procedure()
@@ -182,27 +256,27 @@ Vector<mf::Variable *> MultiFunctionProcedureOperation::get_input_variables(DNod
     const DSocket origin = get_input_origin_socket(input);
     if (origin->is_input()) {
       input_variables.append(this->get_constant_input_variable(DInputSocket(origin)));
-      continue;
-    }
-
-    /* Otherwise, the origin socket is an output, which means it is linked. */
-    const DOutputSocket output = DOutputSocket(origin);
-
-    /* If the origin node is part of the multi-function procedure operation, then the output has an
-     * existing variable for it. */
-    if (compile_unit_.contains(output.node())) {
-      input_variables.append(output_to_variable_map_.lookup(output));
     }
     else {
-      /* Otherwise, the origin node is not part of the multi-function procedure operation, and a
-       * variable that represents an input to the multi-function procedure operation is used. */
-      input_variables.append(this->get_multi_function_input_variable(input, output));
+      /* Otherwise, the origin socket is an output, which means it is linked. */
+      const DOutputSocket output = DOutputSocket(origin);
+
+      /* If the origin node is part of the multi-function procedure operation, then the output has
+       * an existing variable for it. */
+      if (compile_unit_.contains(output.node())) {
+        input_variables.append(output_to_variable_map_.lookup(output));
+      }
+      else {
+        /* Otherwise, the origin node is not part of the multi-function procedure operation, and a
+         * variable that represents an input to the multi-function procedure operation is used. */
+        input_variables.append(this->get_multi_function_input_variable(input, output));
+      }
     }
 
     /* Implicitly convert the variable type if needed by adding a call to an implicit conversion
      * function. */
     input_variables.last() = this->do_variable_implicit_conversion(
-        input, output, input_variables.last());
+        input, origin, input_variables.last());
   }
 
   return input_variables;
@@ -215,6 +289,11 @@ mf::Variable *MultiFunctionProcedureOperation::get_constant_input_variable(DInpu
     case SOCK_FLOAT: {
       const float value = input->default_value_typed<bNodeSocketValueFloat>()->value;
       constant_function = &procedure_.construct_function<mf::CustomMF_Constant<float>>(value);
+      break;
+    }
+    case SOCK_INT: {
+      const int value = input->default_value_typed<bNodeSocketValueInt>()->value;
+      constant_function = &procedure_.construct_function<mf::CustomMF_Constant<int>>(value);
       break;
     }
     case SOCK_VECTOR: {
@@ -295,22 +374,39 @@ mf::Variable *MultiFunctionProcedureOperation::get_multi_function_input_variable
 static mf::MultiFunction *get_conversion_function(const ResultType variable_type,
                                                   const ResultType expected_type)
 {
+  static auto float_to_int_function = mf::build::SI1_SO<float, int>(
+      "Float To Int", float_to_int, mf::build::exec_presets::AllSpanOrSingle());
   static auto float_to_vector_function = mf::build::SI1_SO<float, float4>(
       "Float To Vector", float_to_vector, mf::build::exec_presets::AllSpanOrSingle());
   static auto float_to_color_function = mf::build::SI1_SO<float, float4>(
       "Float To Color", float_to_color, mf::build::exec_presets::AllSpanOrSingle());
+
+  static auto int_to_float_function = mf::build::SI1_SO<int, float>(
+      "Int To Float", int_to_float, mf::build::exec_presets::AllSpanOrSingle());
+  static auto int_to_vector_function = mf::build::SI1_SO<int, float4>(
+      "Int To Vector", int_to_vector, mf::build::exec_presets::AllSpanOrSingle());
+  static auto int_to_color_function = mf::build::SI1_SO<int, float4>(
+      "Int To Color", int_to_color, mf::build::exec_presets::AllSpanOrSingle());
+
   static auto vector_to_float_function = mf::build::SI1_SO<float4, float>(
       "Vector To Float", vector_to_float, mf::build::exec_presets::AllSpanOrSingle());
+  static auto vector_to_int_function = mf::build::SI1_SO<float4, int>(
+      "Vector To Int", vector_to_int, mf::build::exec_presets::AllSpanOrSingle());
   static auto vector_to_color_function = mf::build::SI1_SO<float4, float4>(
       "Vector To Color", vector_to_color, mf::build::exec_presets::AllSpanOrSingle());
+
   static auto color_to_float_function = mf::build::SI1_SO<float4, float>(
       "Color To Float", color_to_float, mf::build::exec_presets::AllSpanOrSingle());
+  static auto color_to_int_function = mf::build::SI1_SO<float4, int>(
+      "Color To Int", color_to_int, mf::build::exec_presets::AllSpanOrSingle());
   static auto color_to_vector_function = mf::build::SI1_SO<float4, float4>(
       "Color To Vector", color_to_vector, mf::build::exec_presets::AllSpanOrSingle());
 
   switch (variable_type) {
     case ResultType::Float:
       switch (expected_type) {
+        case ResultType::Int:
+          return &float_to_int_function;
         case ResultType::Vector:
           return &float_to_vector_function;
         case ResultType::Color:
@@ -325,10 +421,30 @@ static mf::MultiFunction *get_conversion_function(const ResultType variable_type
           break;
       }
       break;
+    case ResultType::Int:
+      switch (expected_type) {
+        case ResultType::Float:
+          return &int_to_float_function;
+        case ResultType::Vector:
+          return &int_to_vector_function;
+        case ResultType::Color:
+          return &int_to_color_function;
+        case ResultType::Int:
+          /* Same type, no conversion needed. */
+          return nullptr;
+        case ResultType::Float2:
+        case ResultType::Float3:
+        case ResultType::Int2:
+          /* Types are not user facing, so we needn't implement them. */
+          break;
+      }
+      break;
     case ResultType::Vector:
       switch (expected_type) {
         case ResultType::Float:
           return &vector_to_float_function;
+        case ResultType::Int:
+          return &vector_to_int_function;
         case ResultType::Color:
           return &vector_to_color_function;
         case ResultType::Vector:
@@ -345,6 +461,8 @@ static mf::MultiFunction *get_conversion_function(const ResultType variable_type
       switch (expected_type) {
         case ResultType::Float:
           return &color_to_float_function;
+        case ResultType::Int:
+          return &color_to_int_function;
         case ResultType::Vector:
           return &color_to_vector_function;
         case ResultType::Color:
@@ -369,10 +487,10 @@ static mf::MultiFunction *get_conversion_function(const ResultType variable_type
 }
 
 mf::Variable *MultiFunctionProcedureOperation::do_variable_implicit_conversion(
-    DInputSocket input_socket, DOutputSocket output_socket, mf::Variable *variable)
+    DInputSocket input_socket, DSocket origin_socket, mf::Variable *variable)
 {
   const ResultType expected_type = get_node_socket_result_type(input_socket.bsocket());
-  const ResultType variable_type = get_node_socket_result_type(output_socket.bsocket());
+  const ResultType variable_type = get_node_socket_result_type(origin_socket.bsocket());
 
   const mf::MultiFunction *function = get_conversion_function(variable_type, expected_type);
   if (!function) {
@@ -429,6 +547,20 @@ void MultiFunctionProcedureOperation::populate_operation_result(DOutputSocket ou
 
   procedure_builder_.add_output_parameter(*variable);
   parameter_identifiers_.append(output_identifier);
+}
+
+bool MultiFunctionProcedureOperation::is_single_value_operation()
+{
+  /* Return true if all inputs are single values. */
+  for (int i = 0; i < procedure_.params().size(); i++) {
+    if (procedure_.params()[i].type == mf::ParamType::InterfaceType::Input) {
+      Result &input = this->get_input(parameter_identifiers_[i]);
+      if (!input.is_single_value()) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 }  // namespace blender::compositor

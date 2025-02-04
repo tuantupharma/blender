@@ -6,10 +6,6 @@
  * \ingroup spseq
  */
 
-#include "MEM_guardedalloc.h"
-
-#include "BLI_ghash.h"
-
 #include "DNA_scene_types.h"
 
 #include "BKE_context.hh"
@@ -53,8 +49,8 @@ static void seq_proxy_build_job(const bContext *C, ReportList *reports)
   blender::Set<std::string> processed_paths;
   bool selected = false; /* Check for no selected strips */
 
-  LISTBASE_FOREACH (Sequence *, seq, SEQ_active_seqbase_get(ed)) {
-    if (!ELEM(seq->type, SEQ_TYPE_MOVIE, SEQ_TYPE_IMAGE) || (seq->flag & SELECT) == 0) {
+  LISTBASE_FOREACH (Strip *, seq, SEQ_active_seqbase_get(ed)) {
+    if (!ELEM(seq->type, STRIP_TYPE_MOVIE, STRIP_TYPE_IMAGE) || (seq->flag & SELECT) == 0) {
       continue;
     }
 
@@ -109,7 +105,7 @@ static int sequencer_rebuild_proxy_exec(bContext *C, wmOperator * /*o*/)
 
   blender::Set<std::string> processed_paths;
 
-  LISTBASE_FOREACH (Sequence *, seq, SEQ_active_seqbase_get(ed)) {
+  LISTBASE_FOREACH (Strip *, seq, SEQ_active_seqbase_get(ed)) {
     if (seq->flag & SELECT) {
       ListBase queue = {nullptr, nullptr};
 
@@ -170,9 +166,9 @@ static int sequencer_enable_proxies_exec(bContext *C, wmOperator *op)
     turnon = false;
   }
 
-  LISTBASE_FOREACH (Sequence *, seq, SEQ_active_seqbase_get(ed)) {
+  LISTBASE_FOREACH (Strip *, seq, SEQ_active_seqbase_get(ed)) {
     if (seq->flag & SELECT) {
-      if (ELEM(seq->type, SEQ_TYPE_MOVIE, SEQ_TYPE_IMAGE)) {
+      if (ELEM(seq->type, STRIP_TYPE_MOVIE, STRIP_TYPE_IMAGE)) {
         SEQ_proxy_set(seq, turnon);
         if (seq->data->proxy == nullptr) {
           continue;

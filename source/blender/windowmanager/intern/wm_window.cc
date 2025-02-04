@@ -8,12 +8,15 @@
  * Window management, wrap GHOST.
  */
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+
+#include <fmt/format.h>
 
 #include "CLG_log.h"
 
@@ -26,7 +29,11 @@
 
 #include "GHOST_C-api.h"
 
-#include "BLI_blenlib.h"
+#include "BLI_math_vector.h"
+#include "BLI_path_utils.hh"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_string_utf8.h"
 #include "BLI_system.h"
 #include "BLI_time.h"
 #include "BLI_utildefines.h"
@@ -44,17 +51,15 @@
 #include "BKE_workspace.hh"
 
 #include "RNA_access.hh"
-#include "RNA_define.hh"
 #include "RNA_enum_types.hh"
-#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
+#include "WM_keymap.hh"
 #include "WM_types.hh"
 #include "wm.hh"
 #include "wm_draw.hh"
 #include "wm_event_system.hh"
 #include "wm_files.hh"
-#include "wm_platform_support.hh"
 #include "wm_window.hh"
 #include "wm_window_private.hh"
 #ifdef WITH_XR_OPENXR
@@ -74,15 +79,9 @@
 #include "UI_interface_icons.hh"
 
 #include "BLF_api.hh"
-#include "GPU_batch.hh"
-#include "GPU_batch_presets.hh"
 #include "GPU_context.hh"
 #include "GPU_framebuffer.hh"
-#include "GPU_immediate.hh"
 #include "GPU_init_exit.hh"
-#include "GPU_platform.hh"
-#include "GPU_state.hh"
-#include "GPU_texture.hh"
 
 #include "UI_resources.hh"
 
@@ -515,38 +514,42 @@ void WM_window_title(wmWindowManager *wm, wmWindow *win, const char *title)
   const bool native_filepath_display = GHOST_SetPath(handle, filepath) == GHOST_kSuccess;
   const bool include_filepath = has_filepath && (filepath != filename) && !native_filepath_display;
 
-  std::string str;
-  if (!wm->file_saved) {
-    str += "* ";
-  }
+  /* File saved state. */
+  std::string win_title = wm->file_saved ? "" : "* ";
 
-  if (has_filepath) {
+  /* File name. Show the file extension if the full file path is not included in the title. */
+  if (include_filepath) {
     const size_t filename_no_ext_len = BLI_path_extension_or_end(filename) - filename;
-    str.append(filename, filename_no_ext_len);
+    win_title.append(filename, filename_no_ext_len);
   }
+  else if (has_filepath) {
+    win_title.append(BLI_path_basename(filename));
+  }
+  /* New / Unsaved file default title. Shows "Untitled" on macOS following the Apple HIGs.*/
   else {
-    str += IFACE_("(Unsaved)");
+#ifdef __APPLE__
+    win_title.append(IFACE_("Untitled"));
+#else
+    win_title.append(IFACE_("(Unsaved)"));
+#endif
   }
 
   if (G_MAIN->recovered) {
-    str += IFACE_(" (Recovered)");
+    win_title.append(IFACE_(" (Recovered)"));
   }
 
   if (include_filepath) {
-    str += " [";
-    str += filepath;
-    str += "]";
+    win_title.append(fmt::format(" [{}]", filepath));
   }
 
-  str += " - Blender ";
-  str += BKE_blender_version_string();
+  win_title.append(fmt::format(" - Blender {}", BKE_blender_version_string()));
 
-  GHOST_SetTitle(handle, str.c_str());
+  GHOST_SetTitle(handle, win_title.c_str());
 
   /* Informs GHOST of unsaved changes to set the window modified visual indicator (macOS)
    * and to give a hint of unsaved changes for a user warning mechanism in case of OS application
    * terminate request (e.g., OS Shortcut Alt+F4, Command+Q, (...) or session end). */
-  GHOST_SetWindowModifiedState(handle, bool(!wm->file_saved));
+  GHOST_SetWindowModifiedState(handle, !wm->file_saved);
 }
 
 void WM_window_set_dpi(const wmWindow *win)
@@ -580,7 +583,7 @@ void WM_window_set_dpi(const wmWindow *win)
   U.dpi = auto_dpi * U.ui_scale * (72.0 / 96.0f);
 
   /* Automatically set larger pixel size for high DPI. */
-  int pixelsize = max_ii(1, int(U.dpi / 64));
+  int pixelsize = max_ii(1, (U.dpi / 64));
   /* User adjustment for pixel size. */
   pixelsize = max_ii(1, pixelsize + U.ui_line_width);
 
@@ -1763,9 +1766,7 @@ static bool wm_window_timers_process(const bContext *C, int *sleep_us_p)
     if (wt->time_next >= time) {
       if ((has_event == false) && (sleep_us != 0)) {
         /* The timer is not ready to run but may run shortly. */
-        if (wt->time_next < ntime_min) {
-          ntime_min = wt->time_next;
-        }
+        ntime_min = std::min(wt->time_next, ntime_min);
       }
       continue;
     }
@@ -2510,25 +2511,16 @@ ImBuf *WM_clipboard_image_get()
   return ibuf;
 }
 
-bool WM_clipboard_image_set(ImBuf *ibuf)
+bool WM_clipboard_image_set_byte_buffer(ImBuf *ibuf)
 {
   if (G.background) {
     return false;
   }
-
-  bool free_byte_buffer = false;
   if (ibuf->byte_buffer.data == nullptr) {
-    /* Add a byte buffer if it does not have one. */
-    IMB_rect_from_float(ibuf);
-    free_byte_buffer = true;
+    return false;
   }
 
   bool success = bool(GHOST_putClipboardImage((uint *)ibuf->byte_buffer.data, ibuf->x, ibuf->y));
-
-  if (free_byte_buffer) {
-    /* Remove the byte buffer if we added it. */
-    imb_freerectImBuf(ibuf);
-  }
 
   return success;
 }
