@@ -753,8 +753,6 @@ static void file_draw_loading_icon(const rcti *tile_draw_rect,
                                    const float preview_icon_aspect,
                                    const FileLayout *layout)
 {
-  const float opacity = 0.4f;
-
   uchar icon_color[4] = {0, 0, 0, 255};
   /* Contrast with background since we are not showing the large document image. */
   UI_GetThemeColor4ubv(TH_TEXT, icon_color);
@@ -765,9 +763,9 @@ static void file_draw_loading_icon(const rcti *tile_draw_rect,
 
   UI_icon_draw_ex(cent_x - (ICON_DEFAULT_WIDTH / aspect / 2.0f),
                   cent_y - (ICON_DEFAULT_HEIGHT / aspect / 2.0f),
-                  ICON_TEMP,
+                  ICON_PREVIEW_LOADING,
                   aspect,
-                  opacity,
+                  1.0f,
                   0.0f,
                   icon_color,
                   false,
@@ -876,7 +874,8 @@ static void renamebutton_cb(bContext *C, void * /*arg1*/, char *oldname)
   if (!STREQ(orgname, newname)) {
     errno = 0;
     if ((BLI_rename(orgname, newname) != 0) || !BLI_exists(newname)) {
-      WM_reportf(RPT_ERROR, "Could not rename: %s", errno ? strerror(errno) : "unknown error");
+      WM_global_reportf(
+          RPT_ERROR, "Could not rename: %s", errno ? strerror(errno) : "unknown error");
       WM_report_banner_show(wm, win);
       /* Renaming failed, reset the name for further renaming handling. */
       STRNCPY(params->renamefile, oldname);
