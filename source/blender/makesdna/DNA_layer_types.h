@@ -148,8 +148,7 @@ typedef struct LightgroupMembership {
 
 typedef struct ViewLayer {
   struct ViewLayer *next, *prev;
-  /** MAX_NAME. */
-  char name[64];
+  char name[/*MAX_NAME*/ 64];
   short flag;
   char _pad[6];
   /** ObjectBase. */
@@ -179,6 +178,13 @@ typedef struct ViewLayer {
   struct World *world_override;
   /** Equivalent to datablocks ID properties. */
   struct IDProperty *id_properties;
+  /**
+   * Equivalent to datablocks system-defined ID properties.
+   *
+   * In Blender 4.5, only used to ensure forward compatibility with 5.x blendfiles, and data
+   * management consistency.
+   */
+  struct IDProperty *system_properties;
 
   struct FreestyleConfig freestyle_config;
   struct ViewLayerEEVEE eevee;
