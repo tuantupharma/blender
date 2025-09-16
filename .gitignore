@@ -4,7 +4,7 @@
 
 /.vs
 /.gitea
-/tests/
+/tests
 
 .png
 .blend
