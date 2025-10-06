@@ -29,6 +29,7 @@
 
 #include "DNA_image_types.h"
 #include "DNA_scene_types.h"
+#include "DNA_space_types.h"
 #include "DNA_vec_types.h"
 
 #include "RE_engine.h"
@@ -749,12 +750,19 @@ static void node_composit_buts_viewlayers(uiLayout *layout, bContext *C, Pointer
   RNA_string_set(&op_ptr, "scene", scene_name);
 }
 
-/* Give a warning if passes are used with a render engine that does not support them. */
 static void node_extra_info(NodeExtraInfoParams &parameters)
 {
-  const Scene *scene = CTX_data_scene(&parameters.C);
+  SpaceNode *space_node = CTX_wm_space_node(&parameters.C);
+  if (space_node->node_tree_sub_type != SNODE_COMPOSITOR_SCENE) {
+    NodeExtraInfoRow row;
+    row.text = RPT_("Node Unsupported");
+    row.tooltip = TIP_("The Render Layers node is only supported for scene compositing");
+    row.icon = ICON_ERROR;
+    parameters.rows.append(std::move(row));
+  }
 
   /* EEVEE supports passes. */
+  const Scene *scene = CTX_data_scene(&parameters.C);
   if (StringRef(scene->r.engine) == RE_engine_id_BLENDER_EEVEE) {
     return;
   }
@@ -801,7 +809,7 @@ class RenderLayerOperation : public NodeOperation {
     Result &alpha_result = this->get_result("Alpha");
 
     if (image_result.should_compute() || alpha_result.should_compute()) {
-      const Result combined_pass = this->context().get_input(
+      const Result combined_pass = this->context().get_pass(
           scene, view_layer, RE_PASSNAME_COMBINED);
       if (image_result.should_compute()) {
         this->execute_pass(combined_pass, image_result);
@@ -828,7 +836,7 @@ class RenderLayerOperation : public NodeOperation {
       const char *pass_name = this->get_pass_name(output->identifier);
       this->context().populate_meta_data_for_pass(scene, view_layer, pass_name, result.meta_data);
 
-      const Result pass = this->context().get_input(scene, view_layer, pass_name);
+      const Result pass = this->context().get_pass(scene, view_layer, pass_name);
       this->execute_pass(pass, result);
     }
   }

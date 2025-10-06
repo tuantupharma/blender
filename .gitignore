@@ -10,3 +10,11 @@
 .blend
 .blend1
 .blend2
+*.blend
+*.png
+*.exr
+/assets/nodes/compositing_nodes_essentials.blend
+/assets/nodes/geometry_nodes_essentials.blend
+/assets/nodes/procedural_hair_node_assets.blend
+/assets/nodes/shading_nodes_essentials.blend
+/tests/files/sequence_editing/effects/recursive_mask_crash_146943.blend
